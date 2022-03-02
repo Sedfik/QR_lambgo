@@ -11,10 +11,10 @@
    CONDITIONS OF ANY KIND, either express or implied. See the License for the
    specific language governing permissions and limitations under the License.
 */
-// snippet-start:[sqs.go.list_queues]
-package producer
+// snippet-start:[sqs.go.receive_messages]
+package consumer
 
-// snippet-start:[sqs.go.list_queues.imports]
+// snippet-start:[sqs.go.receive_messages.imports]
 import (
 	"bytes"
 	"context"
@@ -41,7 +41,6 @@ func Handler(ctx context.Context) (Response, error) {
 	var buf bytes.Buffer
 	body, err := json.Marshal(map[string]interface{}{
 		"message": "Go Serverless v1.0! Your function executed successfully!",
-		"ctx": lc,
 	})
 	if err != nil {
 		return Response{StatusCode: 404}, err
@@ -61,28 +60,40 @@ func Handler(ctx context.Context) (Response, error) {
 	return resp, nil
 }
 
-func Test() {
-	// Create a session that gets credential values from ~/.aws/credentials
-	// and the default region from ~/.aws/config
-	// snippet-start:[sqs.go.list_queues.sess]
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-	// snippet-end:[sqs.go.list_queues.sess]
-	queueName := string("qr-request")
-	queueUrl, _ := sqs.GetQueueURL(sess, &queueName)
-	// snippet-start:[sqs.go.list_queues.display]
-	fmt.Println(queueUrl)
-	// sqs.SendMsg(sess, queueUrl.QueueUrl, "hello, world")
-	// snippet-end:[sqs.go.list_queues.display]
-	err := sqs.SendMsg(sess, queueUrl.QueueUrl, "hello, world")
+func main() {
+	lambda.Start(Handler)
+}
+
+func test() {
+	sess, _ := session.NewSession(&aws.Config{
+		Region:      aws.String("eu-west-3"),
+		Credentials: credentials.NewSharedCredentials("", "perso"),
+	})
+
+	queue := string("qr-request")
+	// Get URL of queue
+	urlResult, err := sqs.GetQueueURL(sess, &queue)
 	if err != nil {
-		fmt.Println("Got an error sending the message:")
+		fmt.Println("Got an error getting the queue URL:")
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Println("Sent message to queue ")
-}
+	// snippet-start:[sqs.go.receive_message.url]
+	queueURL := urlResult.QueueUrl
+	// snippet-end:[sqs.go.receive_message.url]
 
-// snippet-end:[sqs.go.list_queues]
+	timeout := int64(100)
+	msgResult, err := sqs.GetMessages(sess, queueURL, &timeout)
+	if err != nil {
+		fmt.Println("Got an error receiving messages:")
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("Message ID:     " + *msgResult.Messages[0].MessageId)
+
+	fmt.Println("Message Handle: " + *msgResult.Messages[0].ReceiptHandle)
+	fmt.Println("Message Body: " + *msgResult.Messages[0].Body)
+
+}

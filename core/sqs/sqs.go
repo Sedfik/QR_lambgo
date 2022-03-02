@@ -83,43 +83,38 @@ func SendMsg(sess *session.Session, queueURL *string, message string) error {
 	return nil
 }
 
-func main() {
-	// // snippet-start:[sqs.go.send_message.args]
-	// queue := flag.String("q", "", "The name of the queue")
-	// flag.Parse()
+// GetMessages gets the messages from an Amazon SQS queue
+// Inputs:
+//     sess is the current session, which provides configuration for the SDK's service clients
+//     queueURL is the URL of the queue
+//     timeout is how long, in seconds, the message is unavailable to other consumers
+// Output:
+//     If success, the latest message and nil
+//     Otherwise, nil and an error from the call to ReceiveMessage
+func GetMessages(sess *session.Session, queueURL *string, timeout *int64) (*sqs.ReceiveMessageOutput, error) {
+	// Create an SQS service client
+	svc := sqs.New(sess)
 
-	// if *queue == "" {
-	// 	fmt.Println("You must supply the name of a queue (-q QUEUE)")
-	// 	return
-	// }
-	// // snippet-end:[sqs.go.send_message.args]
+	// snippet-start:[sqs.go.receive_messages.call]
+	msgResult, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
+		AttributeNames: []*string{
+			aws.String(sqs.MessageSystemAttributeNameSentTimestamp),
+		},
+		MessageAttributeNames: []*string{
+			aws.String(sqs.QueueAttributeNameAll),
+		},
+		QueueUrl:            queueURL,
+		MaxNumberOfMessages: aws.Int64(1),
+		VisibilityTimeout:   timeout,
+	})
+	// snippet-end:[sqs.go.receive_messages.call]
+	if err != nil {
+		return nil, err
+	}
 
-	// // Create a session that gets credential values from ~/.aws/credentials
-	// // and the default region from ~/.aws/config
-	// // snippet-start:[sqs.go.send_message.sess]
-	// sess := session.Must(session.NewSessionWithOptions(session.Options{
-	// 	SharedConfigState: session.SharedConfigEnable,
-	// }))
-	// // snippet-end:[sqs.go.send_message.sess]
-
-	// // Get URL of queue
-	// result, err := GetQueueURL(sess, queue)
-	// if err != nil {
-	// 	fmt.Println("Got an error getting the queue URL:")
-	// 	fmt.Println(err)
-	// 	return
-	// }
-
-	// queueURL := result.QueueUrl
-
-	// err = SendMsg(sess, queueURL, "hello")
-	// if err != nil {
-	// 	fmt.Println("Got an error sending the message:")
-	// 	fmt.Println(err)
-	// 	return
-	// }
-
-	// fmt.Println("Sent message to queue ")
+	return msgResult, nil
 }
 
-// snippet-end:[sqs.go.send_message]
+// func main() {
+
+// }

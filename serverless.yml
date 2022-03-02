@@ -1,0 +1,55 @@
+
+service: qr-lambgo
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: go1.x
+  region: eu-west-3
+
+# you can overwrite defaults here
+#  stage: dev
+#  region: us-east-1
+
+# you can add statements to the Lambda function's IAM Role here
+  iam:
+   role:
+     statements:
+      - Effect: "Allow"
+        Action:
+          - "sqs:ReceiveMessage"
+        Resource: "arn:aws:sqs:eu-west-3:168410463899:qr-request"
+        
+# you can define service wide environment variables here
+  environment:
+    SQS_QUEUE_NAME: qr-request
+
+package:
+  patterns:
+    - '!./**'
+    - ./bin/**
+
+functions:
+  hello:
+    handler: bin/hello
+    events:
+      - httpApi:
+          path: /hello
+          method: get
+  world:
+    handler: bin/world
+    events:
+      - httpApi:
+          path: /world
+          method: get
+  producer:
+    handler: bin/producer
+    events:
+      - httpApi:
+          path: /producer
+          method: get
+  consumer:
+    handler: bin/consumer
+    events:
+      - sqs: "arn:aws:sqs:eu-west-3:168410463899:qr-request"
